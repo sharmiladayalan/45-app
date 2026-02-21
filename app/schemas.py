@@ -1,16 +1,19 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
+from sqlmodel import SQLModel
 
 from app.database.models import ShipmentStatus
 
 
-class BaseShipment(BaseModel):
+class BaseShipment(SQLModel):
     content: str
     weight: float = Field(le=25)
     destination: int
 
 
-class ShipmentRead(BaseShipment):
+class Shipment(BaseShipment, table=True):
+    # __tablename__ = 'Shipment'
+    id: int =Field(default=None, primary_key=True)
     status: ShipmentStatus
     estimated_delivery: datetime
 

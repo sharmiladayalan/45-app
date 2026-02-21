@@ -20,7 +20,7 @@ engine = create_engine(
 # metadata stores all models (tables)(SQLModel.metadata)
 # create_all(engine) → creates tables inside sqlite.db
 def create_db_tables():
-    from .models import Shipment  # noqa: F401
+    from app.schemas import Shipment  # noqa: F401
     SQLModel.metadata.create_all(bind=engine)
 
 
