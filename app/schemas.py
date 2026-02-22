@@ -1,6 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
-from sqlmodel import SQLModel
+from pydantic import BaseModel
+from sqlmodel import SQLModel, Field
 
 from app.database.models import ShipmentStatus
 
@@ -13,7 +13,8 @@ class BaseShipment(SQLModel):
 
 class Shipment(BaseShipment, table=True):
     # __tablename__ = 'Shipment'
-    id: int =Field(default=None, primary_key=True)
+    id: int = Field(default=None, primary_key=True)
+    # id: Optional[int] = Field(default=None, primary_key=True)
     status: ShipmentStatus
     estimated_delivery: datetime
 
