@@ -1,15 +1,14 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 from scalar_fastapi import get_scalar_api_reference
 
-from app.database.models import  ShipmentStatus
-from app.database.session import SessionDep, create_db_tables
+from app.database.session import create_db_tables
 
-from .schemas import ShipmentCreate, Shipment, ShipmentUpdate
+from app.api.router import router
 
-
+# Now our database is ready with async support when the app starts, 
+# and we can use async sessions in our endpoints
 
 @asynccontextmanager
 async def lifespan_handler(app: FastAPI):
@@ -22,101 +21,7 @@ app = FastAPI(
     lifespan=lifespan_handler,
 )
 
-
-### Read a shipment by id
-@app.get("/shipment", response_model=Shipment)
-def get_shipment(id: int, session: SessionDep):
-    # Check for shipment with given id
-    shipment = session.get(Shipment, id)
-
-    if shipment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Given id doesn't exist!",
-        )
-
-    return shipment
-
-
-### Create a new shipment with content and weight
-@app.post("/shipment", response_model=None)
-def submit_shipment(shipment: ShipmentCreate, session: SessionDep) -> dict[str, int]:
-    new_shipment = Shipment(
-        **shipment.model_dump(),
-        status=ShipmentStatus.placed,
-        estimated_delivery=datetime.now() + timedelta(days=3),
-    )
-    session.add(new_shipment)
-    session.commit()
-    session.refresh(new_shipment)
-
-    return {"id": new_shipment.id}
-
-
-### Update fields of a shipment
-# @app.patch("/shipment", response_model=ShipmentRead)
-# def update_shipment(id: int, shipment_update: ShipmentUpdate, session: SessionDep):
-#     # Update data with given fields
-#     update = shipment_update.model_dump(exclude_none=True)
-
-#     if not update:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="No data provided to update",
-#         )
-
-#     shipment = session.get(Shipment, id)
-#     shipment.sqlmodel_update(update)
-
-#     session.add(shipment)
-#     session.commit()
-#     session.refresh(shipment)
-
-#     return shipment
-
-@app.patch("/shipment", response_model=Shipment)
-def update_shipment(
-    id: int,
-    shipment_update: ShipmentUpdate,
-    session: SessionDep
-):
-    # 🔹 First check if shipment exists
-    shipment = session.get(Shipment, id)
-
-    if shipment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Shipment not found",
-        )
-
-    # 🔹 Get only provided fields
-    update_data = shipment_update.model_dump(exclude_none=True)
-
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No data provided to update",
-        )
-
-    # 🔹 Update the shipment safely
-    shipment.sqlmodel_update(update_data)
-
-    session.add(shipment)
-    session.commit()
-    session.refresh(shipment)
-
-    return shipment
-
-
-### Delete a shipment by id
-@app.delete("/shipment")
-def delete_shipment(id: int, session: SessionDep) -> dict[str, str]:
-    # Remove from database
-    session.delete(session.get(Shipment, id))
-    session.commit()
-
-    return {"detail": f"Shipment with id #{id} is deleted!"}
-
+app.include_router(router)
 
 ### Scalar API Documentation
 @app.get("/scalar", include_in_schema=False)
